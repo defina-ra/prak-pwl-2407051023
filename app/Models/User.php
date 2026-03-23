@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+         'kelas_id',
     ];
 
     /**
@@ -42,4 +43,15 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+public function kelas()
+    {
+        return $this->belongsTo(Kelas::class);
+    }
+
+     public function getUser()
+    {
+        return $this->join('kelas', 'kelas.id', '=', 'users.kelas_id')
+            ->select('users.*', 'kelas.nama_kelas as nama_kelas')
+            ->get();
+    }
 }
