@@ -8,11 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // kosong
+        
     }
 
     public function down(): void
     {
-        // kosong
+        
     }
 };
