@@ -17,9 +17,23 @@ class UserManagementController extends Controller
         $this->kelasModel = new Kelas();
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $users = $this->userModel->getUser();
+        $query = User::join('kelas', 'kelas.id', '=', 'users.kelas_id')
+            ->select('users.*', 'kelas.nama_kelas as nama_kelas');
+
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('users.name', 'like', '%' . $request->search . '%')
+                  ->orWhere('users.npm', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        if ($request->kelas_filter) {
+            $query->where('users.kelas_id', $request->kelas_filter);
+        }
+
+        $users = $query->paginate(5);
         $kelas = $this->kelasModel->getKelas();
         return view('user-management', compact('users', 'kelas'));
     }
@@ -44,7 +58,7 @@ class UserManagementController extends Controller
             'kelas_id' => $request->input('kelas_id')
         ]);
 
-        return redirect()->route('user-management.index');
+        return redirect()->route('user-management.index')->with('success', 'Data berhasil ditambahkan!');
     }
 
     public function update(Request $request, $id)
@@ -62,13 +76,13 @@ class UserManagementController extends Controller
             'kelas_id' => $request->input('kelas_id')
         ]);
 
-        return redirect()->route('user-management.index');
+        return redirect()->route('user-management.index')->with('success', 'Data berhasil diperbarui!');
     }
 
     public function destroy($id)
     {
         $user = User::findOrFail($id);
         $user->delete();
-        return redirect()->route('user-management.index');
+        return redirect()->route('user-management.index')->with('success', 'Data berhasil dihapus!');
     }
 }
