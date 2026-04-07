@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Kelas;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class UserManagementController extends Controller
 {
@@ -17,23 +20,9 @@ class UserManagementController extends Controller
         $this->kelasModel = new Kelas();
     }
 
-    public function index(Request $request)
+    public function index()
     {
-        $query = User::join('kelas', 'kelas.id', '=', 'users.kelas_id')
-            ->select('users.*', 'kelas.nama_kelas as nama_kelas');
-
-        if ($request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('users.name', 'like', '%' . $request->search . '%')
-                  ->orWhere('users.npm', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        if ($request->kelas_filter) {
-            $query->where('users.kelas_id', $request->kelas_filter);
-        }
-
-        $users = $query->paginate(5);
+        $users = $this->userModel->getUser();
         $kelas = $this->kelasModel->getKelas();
         return view('user-management', compact('users', 'kelas'));
     }
@@ -46,43 +35,64 @@ class UserManagementController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'npm' => 'required|string|max:255',
-            'kelas_id' => 'required|exists:kelas,id'
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'npm' => 'required|string|max:255',
+                'kelas_id' => 'required|exists:kelas,id'
+            ]);
 
-        $this->userModel->create([
-            'name' => $request->input('name'),
-            'npm' => $request->input('npm'),
-            'kelas_id' => $request->input('kelas_id')
-        ]);
+            $this->userModel->create([
+                'name' => $request->input('name'),
+                'npm' => $request->input('npm'),
+                'kelas_id' => $request->input('kelas_id')
+            ]);
 
-        return redirect()->route('user-management.index')->with('success', 'Data berhasil ditambahkan!');
+            Log::info('User created successfully');
+            return redirect()->route('user-management.index')->with('success', 'User berhasil dibuat');
+        } catch (Exception $e) {
+            Log::error('User creation failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal dibuat');
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'npm' => 'required|string|max:255',
-            'kelas_id' => 'required|exists:kelas,id'
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'npm' => 'required|string|max:255',
+                'kelas_id' => 'required|exists:kelas,id'
+            ]);
 
-        $user = User::findOrFail($id);
-        $user->update([
-            'name' => $request->input('name'),
-            'npm' => $request->input('npm'),
-            'kelas_id' => $request->input('kelas_id')
-        ]);
+            DB::transaction(function () use ($id, $request) {
+                $user = User::findOrFail($id);
+                $user->update([
+                    'name' => $request->input('name'),
+                    'npm' => $request->input('npm'),
+                    'kelas_id' => $request->input('kelas_id')
+                ]);
+            });
 
-        return redirect()->route('user-management.index')->with('success', 'Data berhasil diperbarui!');
+            return redirect()->route('user-management.index')->with('success', 'User berhasil diupdate');
+        } catch (Exception $e) {
+            Log::error('User update failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal diupdate');
+        }
     }
 
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
-        $user->delete();
-        return redirect()->route('user-management.index')->with('success', 'Data berhasil dihapus!');
+        try {
+            DB::transaction(function () use ($id) {
+                $user = User::findOrFail($id);
+                $user->delete();
+            });
+
+            return redirect()->route('user-management.index')->with('success', 'User berhasil dihapus');
+        } catch (Exception $e) {
+            Log::error('User delete failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal dihapus');
+        }
     }
 }
