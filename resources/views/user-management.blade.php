@@ -4,7 +4,6 @@
 
 @section('content')
 
-{{-- Alert Notifikasi --}}
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     ✅ {{ session('success') }}
@@ -21,13 +20,11 @@
 
 <div class="container-fluid py-4">
 
-    {{-- Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-primary">👥 User Management</h2>
         <a class="btn btn-primary" href="{{ route('user-management.create') }}">➕ Tambah User</a>
     </div>
 
-    {{-- Search & Filter --}}
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('user-management.index') }}" class="row g-2">
@@ -56,7 +53,6 @@
         </div>
     </div>
 
-    {{-- Tabel --}}
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <table class="table table-hover table-striped mb-0">
@@ -71,9 +67,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($users as $index => $user)
+                    @forelse ($users as $user)
                     <tr>
-                        <td>{{ $users->firstItem() + $index }}</td>
+                        <td>{{ $loop->iteration }}</td>
                         <td><small class="text-muted">{{ Str::limit($user->id, 8, '...') }}</small></td>
                         <td class="fw-semibold">{{ $user->name }}</td>
                         <td>{{ $user->npm }}</td>
@@ -103,14 +99,8 @@
         </div>
     </div>
 
-    {{-- Paginasi --}}
-    <div class="d-flex justify-content-center mt-4">
-        {{ $users->withQueryString()->links() }}
-    </div>
-
 </div>
 
-{{-- Modal Edit --}}
 @foreach ($users as $user)
 <div class="modal fade" id="editModal{{ $user->id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
