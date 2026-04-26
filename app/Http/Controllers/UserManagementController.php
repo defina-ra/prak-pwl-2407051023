@@ -2,32 +2,97 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Kelas;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class UserManagementController extends Controller
 {
+    public $userModel;
+    public $kelasModel;
+
+    public function __construct()
+    {
+        $this->userModel = new User();
+        $this->kelasModel = new Kelas();
+    }
+
     public function index()
     {
-        $users = [
-            [
-            'nama' => 'Defina',
-            'npm' => '2407051023',
-            'jurusan'=> 'Ilmu Komputer',
-            'prodi' => 'D3 Manajemen Informatika'
-            ],
-            [
-            'nama' => 'Adel',
-            'npm' => '2407051024',
-            'jurusan'=> 'Ilmu Komputer',
-            'prodi' => 'D3 Manajemen Informatika'
-            ],
-            [
-            'nama' => 'zulfa',
-            'npm' => '2407051006',
-            'jurusan'=> 'Ilmu Komputer',
-            'prodi' => 'D3 Manajemen Informatika'
-            ]
-        ];
-        return view('user-managment', compact('users'));
+        $users = $this->userModel->getUser();
+        $kelas = $this->kelasModel->getKelas();
+        return view('user-management', compact('users', 'kelas'));
+    }
+
+    public function create()
+    {
+        $kelas = $this->kelasModel->getKelas();
+        return view('create-user', compact('kelas'));
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'npm' => 'required|string|max:255',
+                'kelas_id' => 'required|exists:kelas,id'
+            ]);
+
+            $this->userModel->create([
+                'name' => $request->input('name'),
+                'npm' => $request->input('npm'),
+                'kelas_id' => $request->input('kelas_id')
+            ]);
+
+            Log::info('User created successfully');
+            return redirect()->route('user-management.index')->with('success', 'User berhasil dibuat');
+        } catch (Exception $e) {
+            Log::error('User creation failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal dibuat');
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'npm' => 'required|string|max:255',
+                'kelas_id' => 'required|exists:kelas,id'
+            ]);
+
+            DB::transaction(function () use ($id, $request) {
+                $user = User::findOrFail($id);
+                $user->update([
+                    'name' => $request->input('name'),
+                    'npm' => $request->input('npm'),
+                    'kelas_id' => $request->input('kelas_id')
+                ]);
+            });
+
+            return redirect()->route('user-management.index')->with('success', 'User berhasil diupdate');
+        } catch (Exception $e) {
+            Log::error('User update failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal diupdate');
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            DB::transaction(function () use ($id) {
+                $user = User::findOrFail($id);
+                $user->delete();
+            });
+
+            return redirect()->route('user-management.index')->with('success', 'User berhasil dihapus');
+        } catch (Exception $e) {
+            Log::error('User delete failed: ' . $e->getMessage());
+            return redirect()->route('user-management.index')->with('error', 'User gagal dihapus');
+        }
     }
 }
